@@ -149,19 +149,30 @@ class HueClient:
         bri_pct: float,
         transition_seconds: int = 60,
     ) -> None:
-        """Push HSB values to all configured lights."""
+        """Push HSB values to all configured lights that are currently on."""
+        try:
+            all_lights = self.get_lights()
+        except Exception as e:
+            logger.warning("Could not fetch light states, skipping on/off check: %s", e)
+            all_lights = {}
+
         state = build_light_state(hue_deg, sat_pct, bri_pct, transition_seconds)
         errors = []
+        skipped = []
         for light_id in light_ids:
+            if all_lights and not all_lights.get(light_id, {}).get("state", {}).get("on", True):
+                skipped.append(light_id)
+                continue
             try:
                 self.set_light_state(light_id, state)
             except Exception as e:
                 logger.error("Failed to update light %s: %s", light_id, e)
                 errors.append(light_id)
-        if errors:
-            logger.warning("Failed to update lights: %s", errors)
-        else:
+        updated = [lid for lid in light_ids if lid not in errors and lid not in skipped]
+        if skipped:
+            logger.info("Skipped %d off light(s): %s", len(skipped), skipped)
+        if updated:
             logger.info(
                 "Updated %d light(s): H=%.0f° S=%.0f%% B=%.0f%%",
-                len(light_ids), hue_deg, sat_pct, bri_pct
+                len(updated), hue_deg, sat_pct, bri_pct
             )
