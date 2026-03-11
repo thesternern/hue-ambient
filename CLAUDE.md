@@ -155,6 +155,7 @@ hue-ambient/
 │   └── color_utils.py    # HSB/RGB/CIE conversion helpers
 ├── setup_hue.py          # One-time OAuth + light discovery
 ├── preview.py            # Test palette output for any datetime/weather
+├── always_on.py          # PythonAnywhere always-on task wrapper (15-min loop)
 └── tests/
     ├── test_palette.py   # Unit tests for color calculations
     └── test_environment.py
@@ -189,12 +190,38 @@ Build and test in this sequence:
 
 ## PythonAnywhere Deployment
 
-Using PythonAnywhere's $5/month "Hacker" tier, which supports scheduled tasks at custom intervals.
+Using PythonAnywhere's $10/month "Developer" tier.
 
-Once the project works locally:
+**Deployment approach:** The Developer plan's scheduled tasks only support hourly or daily intervals, which is too infrequent. Instead, use the plan's **1 always-on task** slot — a script that runs in a continuous loop, executes the main logic, then sleeps for 15 minutes.
 
-1. Upload project files to PythonAnywhere
-2. Set environment variables in a `.env` file in the project directory
-3. Install dependencies: `pip install -r requirements.txt`
-4. Add a scheduled task: `python /home/yourusername/hue-ambient/src/main.py`
-5. Set schedule to every 15 minutes
+Create an `always_on.py` wrapper at the project root:
+
+```python
+import time
+import logging
+from src.main import run
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+INTERVAL_SECONDS = 15 * 60  # 15 minutes
+
+if __name__ == "__main__":
+    while True:
+        try:
+            run()
+        except Exception as e:
+            logger.error(f"Run failed: {e}")
+        time.sleep(INTERVAL_SECONDS)
+```
+
+`main.py` should expose a `run()` function that handles a single cycle (fetch environment, calculate palette, push to Hue).
+
+**Setup steps:**
+
+1. Sign up for PythonAnywhere Developer plan ($10/month)
+2. Upload project files via the Files tab or clone from git in a Bash console
+3. In a Bash console: `cd ~/hue-ambient && pip install -r requirements.txt`
+4. Create `.env` file: `nano ~/hue-ambient/.env` and paste in API keys
+5. Test manually: `cd ~/hue-ambient && python -c "from src.main import run; run()"`
+6. Go to the "Tasks" tab → Always-on tasks → set command to: `cd ~/hue-ambient && python always_on.py`
