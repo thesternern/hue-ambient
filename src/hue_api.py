@@ -153,14 +153,14 @@ class HueClient:
         try:
             all_lights = self.get_lights()
         except Exception as e:
-            logger.warning("Could not fetch light states, skipping on/off check: %s", e)
+            logger.warning("Could not fetch light states, skipping all lights: %s", e)
             all_lights = {}
 
         state = build_light_state(hue_deg, sat_pct, bri_pct, transition_seconds)
         errors = []
         skipped = []
         for light_id in light_ids:
-            if all_lights and not all_lights.get(light_id, {}).get("state", {}).get("on", True):
+            if not all_lights.get(light_id, {}).get("state", {}).get("on", False):
                 skipped.append(light_id)
                 continue
             try:
