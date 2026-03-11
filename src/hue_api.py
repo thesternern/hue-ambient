@@ -66,7 +66,6 @@ def build_light_state(
     """Build the Hue API light state dict from HSB values."""
     hue_val, sat_val, bri_val = hsb_to_hue_api(hue_deg, sat_pct, bri_pct)
     return {
-        "on": True,
         "hue": hue_val,
         "sat": sat_val,
         "bri": bri_val,
