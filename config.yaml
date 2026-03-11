@@ -1,0 +1,25 @@
+location:
+  latitude: 49.3200
+  longitude: -123.0724
+  timezone: America/Vancouver
+
+schedule:
+  interval_minutes: 15
+  transition_seconds: 60
+
+api_keys:
+  openweathermap: ${OWM_API_KEY}
+
+hue:
+  client_id: ${HUE_CLIENT_ID}
+  client_secret: ${HUE_CLIENT_SECRET}
+  refresh_token: ${HUE_REFRESH_TOKEN}
+
+# Palette tuning - adjust these to taste
+palette:
+  brightness_multiplier: 1.0  # Global brightness scale (0.5 = half bright, 1.5 = brighter)
+  saturation_multiplier: 1.0  # Global saturation scale
+  brightness_floor: 60        # Minimum brightness % — keeps lights ambient even at night (0 = no floor)
+  cloud_desaturation_strength: 0.25  # How much clouds desaturate (0-1)
+  rain_hue_shift: 15  # Degrees to shift toward blue during rain
+  temperature_influence: 0.1  # How much temp affects color (0 = none, 1 = heavy)
