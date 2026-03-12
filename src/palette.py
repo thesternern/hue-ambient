@@ -14,11 +14,11 @@ logger = logging.getLogger(__name__)
 # Elevation values must be sorted ascending.
 ANCHOR_POINTS = [
     (-25, 250, 65, 10),   # Deep night: deep indigo
-    (-12, 270, 58, 20),   # Twilight: violet/lavender
-    (-3,  30,  78, 37),   # Dawn/dusk: amber/coral
-    (5,   35,  68, 60),   # Golden hour: warm amber/peach
-    (20,  42,  38, 77),   # Morning/afternoon: warm white
-    (45,  50,  27, 92),   # Midday: neutral/cool white
+    (-12, 270, 60, 20),   # Twilight: violet/lavender
+    (-3,  28,  85, 38),   # Dawn/dusk: rose-coral, vivid
+    (5,   32,  80, 62),   # Golden hour: rich warm amber
+    (20,  40,  58, 78),   # Morning/afternoon: warm gold
+    (45,  48,  45, 92),   # Midday: golden-warm, not white
 ]
 
 
@@ -67,14 +67,28 @@ def apply_weather_modifiers(
     rain_hue_shift = config.get("rain_hue_shift", 15)
     temp_influence = config.get("temperature_influence", 0.1)
 
+    # Clear sky: vivid saturation boost when sun is up and clouds are low
+    clear_sky_boost = config.get("clear_sky_saturation_boost", 20)
+    if state.sun_elevation > 10 and state.cloud_cover < 30:
+        clear_factor = 1.0 - (state.cloud_cover / 30.0)  # 1.0 at 0% clouds → 0.0 at 30%
+        s += clear_sky_boost * clear_factor
+        b += 5 * clear_factor
+
     # Cloud cover: desaturate + slight brightness drop + cool hue shift
     cloud_factor = state.cloud_cover / 100.0
     s -= cloud_factor * cloud_strength * 100  # up to -25 sat at full overcast
     b -= cloud_factor * 8                     # slight brightness drop
     h += cloud_factor * 5                     # slight cool shift
 
+    # Thunderstorm: dramatic violet pull, lower brightness
+    thunderstorm_hue_target = config.get("thunderstorm_hue_target", 265)
+    if 200 <= state.condition_id <= 299:
+        storm_intensity = min(state.cloud_cover / 100.0, 1.0)
+        h = h * (1 - 0.7 * storm_intensity) + thunderstorm_hue_target * (0.7 * storm_intensity)
+        b -= 30 * storm_intensity
+        s = min(100.0, s + 15 * storm_intensity)
     # Rain: shift toward blue-grey, drop brightness
-    if state.is_rain and not state.is_snow:
+    elif state.is_rain and not state.is_snow:
         rain_intensity = min(state.cloud_cover / 100.0, 1.0)
         h += rain_hue_shift * rain_intensity
         b -= 20 * rain_intensity
@@ -115,7 +129,8 @@ def compute_hsb(
 ) -> tuple[float, float, float]:
     """
     Full pipeline: EnvironmentState -> HSB ready for the Hue API.
-    palette_config keys: cloud_desaturation_strength, rain_hue_shift, temperature_influence
+    palette_config keys: cloud_desaturation_strength, rain_hue_shift, temperature_influence,
+                         clear_sky_saturation_boost, thunderstorm_hue_target
     brightness_floor: minimum brightness % (e.g. 60 keeps lights ambient at night)
     """
     if palette_config is None:

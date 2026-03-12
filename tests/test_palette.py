@@ -38,7 +38,7 @@ class TestBaseHsb:
     def test_midday(self):
         h, s, b = get_base_hsb(45)
         assert 45 <= h <= 55
-        assert 20 <= s <= 35
+        assert 40 <= s <= 50
         assert 85 <= b <= 100
 
     def test_golden_hour(self):

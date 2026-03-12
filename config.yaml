@@ -23,3 +23,5 @@ palette:
   cloud_desaturation_strength: 0.25  # How much clouds desaturate (0-1)
   rain_hue_shift: 15  # Degrees to shift toward blue during rain
   temperature_influence: 0.1  # How much temp affects color (0 = none, 1 = heavy)
+  clear_sky_saturation_boost: 20  # Saturation boost on clear sunny days (sun >10°, clouds <30%)
+  thunderstorm_hue_target: 265    # Hue target during thunderstorms (260-270° = deep violet)
