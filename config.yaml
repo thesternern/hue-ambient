@@ -4,7 +4,7 @@ location:
   timezone: America/Vancouver
 
 schedule:
-  interval_minutes: 15
+  interval_minutes: 5
   transition_seconds: 60
 
 api_keys:
