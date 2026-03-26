@@ -32,12 +32,19 @@ TOKENS_FILE = Path(os.getenv("TOKENS_PATH", PROJECT_ROOT / "tokens.json"))
 
 
 def bootstrap_files():
-    """Create tokens.json and lights_config.json from env vars if they don't exist."""
-    if not TOKENS_FILE.exists():
-        refresh_token = os.getenv("HUE_REFRESH_TOKEN")
-        bridge_username = os.getenv("HUE_BRIDGE_USERNAME")
-        if refresh_token and bridge_username:
+    """Create or sync tokens.json and lights_config.json from env vars."""
+    refresh_token = os.getenv("HUE_REFRESH_TOKEN")
+    bridge_username = os.getenv("HUE_BRIDGE_USERNAME")
+
+    if refresh_token and bridge_username:
+        existing = None
+        if TOKENS_FILE.exists():
+            with open(TOKENS_FILE) as f:
+                existing = json.load(f)
+
+        if not existing or existing.get("refresh_token") != refresh_token:
             data = {
+                **(existing or {}),
                 "access_token": "",
                 "refresh_token": refresh_token,
                 "bridge_username": bridge_username,
@@ -45,9 +52,9 @@ def bootstrap_files():
             }
             with open(TOKENS_FILE, "w") as f:
                 json.dump(data, f, indent=2)
-            logger.info("Bootstrapped tokens.json from environment variables")
-        else:
-            logger.warning("tokens.json missing and HUE_REFRESH_TOKEN/HUE_BRIDGE_USERNAME not set")
+            logger.info("Synced tokens.json with environment variables")
+    elif not TOKENS_FILE.exists():
+        logger.warning("tokens.json missing and HUE_REFRESH_TOKEN/HUE_BRIDGE_USERNAME not set")
 
     if not LIGHTS_CONFIG_FILE.exists():
         light_ids = os.getenv("HUE_LIGHT_IDS")
