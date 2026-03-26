@@ -34,7 +34,7 @@ logger = logging.getLogger("main")
 PROJECT_ROOT = Path(__file__).parent.parent
 CONFIG_FILE = PROJECT_ROOT / "config.yaml"
 LIGHTS_CONFIG_FILE = PROJECT_ROOT / "lights_config.json"
-TOKENS_FILE = PROJECT_ROOT / "tokens.json"
+TOKENS_FILE = Path(os.getenv("TOKENS_PATH", PROJECT_ROOT / "tokens.json"))
 
 
 def load_config(path: Path) -> dict:
