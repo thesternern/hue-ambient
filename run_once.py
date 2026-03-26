@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from src.main import load_config, load_lights_config, run
+from src.hue_api import HueClient
 
 logging.basicConfig(
     level=logging.INFO,
@@ -72,12 +73,33 @@ def bootstrap_files():
             logger.warning("lights_config.json missing and HUE_LIGHT_IDS/HUE_BRIDGE_USERNAME not set")
 
 
+def force_color_override(config, lights_config):
+    """Push a specific HSB color directly, bypassing the palette engine.
+    Set FORCE_COLOR env var to 'H,S,B' (e.g. '280,80,80' for purple)."""
+    parts = os.getenv("FORCE_COLOR", "").split(",")
+    if len(parts) != 3:
+        return False
+    h, s, b = float(parts[0]), float(parts[1]), float(parts[2])
+    logger.info("FORCE_COLOR override: H=%.0f S=%.0f B=%.0f", h, s, b)
+    hue_cfg = config["hue"]
+    client = HueClient(
+        client_id=hue_cfg["client_id"],
+        client_secret=hue_cfg["client_secret"],
+        tokens_file=str(TOKENS_FILE),
+    )
+    light_ids = lights_config["light_ids"]
+    client.set_all_lights(light_ids, h, s, b, transition_seconds=5)
+    logger.info("Force color pushed to %d light(s)", len(light_ids))
+    return True
+
+
 if __name__ == "__main__":
     bootstrap_files()
     config = load_config(CONFIG_FILE)
     lights_config = load_lights_config(LIGHTS_CONFIG_FILE)
     try:
-        run(config, lights_config)
+        if not force_color_override(config, lights_config):
+            run(config, lights_config)
     except Exception as e:
         logger.error("Run failed: %s", e)
         sys.exit(1)
