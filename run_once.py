@@ -33,27 +33,44 @@ TOKENS_FILE = Path(os.getenv("TOKENS_PATH", PROJECT_ROOT / "tokens.json"))
 
 
 def bootstrap_files():
-    """Create or sync tokens.json and lights_config.json from env vars."""
+    """Create or sync tokens.json and lights_config.json from env vars.
+
+    Uses env_refresh_token to track the env var we bootstrapped from.
+    Only overwrites tokens.json when the user changes the env var,
+    NOT when Hue rotates the refresh token during normal operation.
+    """
     refresh_token = os.getenv("HUE_REFRESH_TOKEN")
     bridge_username = os.getenv("HUE_BRIDGE_USERNAME")
 
     if refresh_token and bridge_username:
-        existing = None
         if TOKENS_FILE.exists():
             with open(TOKENS_FILE) as f:
                 existing = json.load(f)
-
-        if not existing or existing.get("refresh_token") != refresh_token:
+            # Only overwrite if the env var itself changed (user updated it).
+            # Compare against env_refresh_token (the original seed), not
+            # refresh_token (which Hue may have rotated).
+            if existing.get("env_refresh_token") != refresh_token:
+                data = {
+                    "access_token": "",
+                    "refresh_token": refresh_token,
+                    "env_refresh_token": refresh_token,
+                    "bridge_username": bridge_username,
+                    "saved_at": time.time(),
+                }
+                with open(TOKENS_FILE, "w") as f:
+                    json.dump(data, f, indent=2)
+                logger.info("Synced tokens.json with updated environment variable")
+        else:
             data = {
-                **(existing or {}),
                 "access_token": "",
                 "refresh_token": refresh_token,
+                "env_refresh_token": refresh_token,
                 "bridge_username": bridge_username,
                 "saved_at": time.time(),
             }
             with open(TOKENS_FILE, "w") as f:
                 json.dump(data, f, indent=2)
-            logger.info("Synced tokens.json with environment variables")
+            logger.info("Bootstrapped tokens.json from environment variables")
     elif not TOKENS_FILE.exists():
         logger.warning("tokens.json missing and HUE_REFRESH_TOKEN/HUE_BRIDGE_USERNAME not set")
 
