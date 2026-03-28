@@ -14,11 +14,12 @@ logger = logging.getLogger(__name__)
 # Elevation values must be sorted ascending.
 ANCHOR_POINTS = [
     (-25, 250, 65, 10),   # Deep night: deep indigo
-    (-12, 270, 60, 20),   # Twilight: violet/lavender
-    (-3,  28,  85, 38),   # Dawn/dusk: rose-coral, vivid
-    (5,   32,  80, 62),   # Golden hour: rich warm amber
-    (20,  40,  58, 78),   # Morning/afternoon: warm gold
-    (45,  48,  45, 92),   # Midday: golden-warm, not white
+    (-14, 270, 55, 20),   # Twilight: soft violet
+    (-10, 330, 18, 25),   # Pre-dawn/dusk: desaturated grey-rose (bridge)
+    (-5,  15,  70, 35),   # Dawn/dusk: warm peach
+    (8,   28,  78, 62),   # Golden hour: rich warm amber
+    (20,  35,  55, 78),   # Morning/afternoon: warm amber
+    (45,  38,  42, 92),   # Midday: warm neutral
 ]
 
 
@@ -40,8 +41,15 @@ def _interpolate_anchors(elevation: float) -> tuple[float, float, float]:
         e1, h1, s1, b1 = ANCHOR_POINTS[i + 1]
         if e0 <= elevation <= e1:
             t = (elevation - e0) / (e1 - e0)
+            # Hue wraps around 360° — take the short path
+            h0_adj, h1_adj = h0, h1
+            if abs(h1 - h0) > 180:
+                if h0 > h1:
+                    h1_adj = h1 + 360
+                else:
+                    h0_adj = h0 + 360
             return (
-                cosine_interpolate(h0, h1, t),
+                cosine_interpolate(h0_adj, h1_adj, t) % 360,
                 cosine_interpolate(s0, s1, t),
                 cosine_interpolate(b0, b1, t),
             )

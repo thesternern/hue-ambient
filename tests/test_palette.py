@@ -37,13 +37,13 @@ class TestBaseHsb:
 
     def test_midday(self):
         h, s, b = get_base_hsb(45)
-        assert 45 <= h <= 55
-        assert 40 <= s <= 50
+        assert 35 <= h <= 42
+        assert 38 <= s <= 48
         assert 85 <= b <= 100
 
     def test_golden_hour(self):
-        h, s, b = get_base_hsb(5)
-        assert 25 <= h <= 45  # warm amber/peach
+        h, s, b = get_base_hsb(8)
+        assert 25 <= h <= 38  # warm amber/peach
         assert b > 50
 
     def test_brightness_increases_with_elevation(self):
