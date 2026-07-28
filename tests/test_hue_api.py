@@ -32,7 +32,9 @@ class TestBuildLightState:
         assert "sat" in state
         assert "bri" in state
         assert "transitiontime" in state
-        assert state["on"] is True
+        # No "on" key by design - sending it would wake lights the user
+        # deliberately switched off.
+        assert "on" not in state
 
     def test_transition_time_in_deciseconds(self):
         state = build_light_state(35, 70, 80, transition_seconds=60)

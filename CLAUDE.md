@@ -44,21 +44,46 @@ The artistic core. Takes an `EnvironmentState` and outputs HSB (hue, saturation,
 
 **Base color curve** — defined as anchor points mapped to sun elevation angles, with smooth interpolation between them:
 
-| Sun Elevation | Phase | Hue Range | Saturation | Brightness |
+| Sun Elevation | Phase | Hue | Saturation | Brightness |
 |---|---|---|---|---|
-| < -18° | Deep night | 240-260° (deep indigo/navy) | 60-70% | 8-15% |
-| -18° to -6° | Twilight | 260-280° (violet/lavender) | 50-65% | 15-25% |
-| -6° to 0° | Dawn/dusk | 20-40° (amber/coral) | 70-85% | 25-50% |
-| 0° to 10° | Golden hour | 25-45° (warm amber/peach) | 60-75% | 50-70% |
-| 10° to 30° | Morning/afternoon | 35-50° (warm white) | 30-45% | 70-85% |
-| 30°+ | Midday | 45-55° (neutral/cool white) | 20-35% | 85-100% |
+| -25° | Deep night | 250° (indigo) | 70% | 8% |
+| -14° | Twilight | 272° (violet) | 60% | 16% |
+| -8° | Pre-dawn/dusk | 300° (mauve) | 48% | 24% |
+| -4° | Horizon | 350° (deep coral) | 68% | 33% |
+| 0° | Sunrise/sunset | 12° (coral-amber) | 82% | 44% |
+| 8° | Golden hour | 22° (rich amber) | 80% | 63% |
+| 18° | Morning/afternoon | 32° (gold) | 62% | 77% |
+| 32° | Warm neutral | 44° | 40% | 87% |
+| 46° | Cool gold | 62° | 14% | 92% |
+| 51° | Crossover | 165° | 5% (near-white) | 96% |
+| 64° | Summer midday | 195° (cool cyan-white) | 22% | 100% |
 
 These values are starting points — they should be tunable via a config file.
 
+Two constraints on this curve:
+
+- **The day is an arc, not a band.** Hue travels the wheel rather than sitting
+  in amber all day. Because the curve is driven by sun elevation and this
+  latitude tops out near 17° in December, winter never reaches the cool end —
+  a January afternoon stays amber while a July midday goes cyan-white. That
+  seasonal split is the whole point, and it falls out of the physics for free.
+- **No visible green.** The gold→cyan sweep has to cross the green band
+  (roughly 70–160°), which looks wrong on an indoor light. Saturation is
+  crushed to single digits across the 46–51° crossover so the transit reads as
+  plain white. Any new saturation *boost* must therefore be multiplicative, not
+  additive — an additive boost re-saturates the crossover straight back into
+  green. `tests/test_palette.py::TestNoGreenLight` sweeps the whole elevation
+  range against every weather condition to enforce this.
+
+**Sun azimuth** breaks the symmetry of the day. Elevation alone is symmetric
+about solar noon, so 9am and 3pm produced an identical colour; azimuth tells us
+which side of noon we are on, and the afternoon is skewed warmer and slightly
+more saturated to match how afternoon light actually reads.
+
 **Weather modifiers** — each modifier adjusts the base curve output:
 
-- **Cloud cover** (0-100%): Desaturates proportionally (up to -25% sat at full overcast), shifts hue slightly toward cool (blue), reduces brightness slightly
-- **Rain**: Shifts hue toward blue-grey (210-230°), drops brightness by 15-25%, adds a "weight" to the atmosphere
+- **Cloud cover** (0-100%): Desaturates proportionally (up to -25% sat at full overcast), reduces brightness slightly. Deliberately *no* hue push — overcast removes colour rather than adding one, and nudging a warm hue "toward cool" only walks it into yellow-green.
+- **Rain**: Drifts toward blue-grey (210-230°), drops brightness by 15-25%, adds a "weight" to the atmosphere. The hue drift is scaled by how desaturated the colour already is, so vivid colours grey out *before* they swing round the wheel.
 - **Snow**: Adds lavender/cool white tint, increases brightness slightly (reflective quality), high saturation reduction
 - **Fog**: Compresses the entire color range toward muted warm grey, significant saturation reduction, moderate brightness
 - **Temperature**: Subtle global warm/cool shift — colder temps nudge hue slightly cooler, warmer temps nudge warmer. This should be very subtle, not dominant.
@@ -67,6 +92,14 @@ These values are starting points — they should be tunable via a config file.
 Modifiers should be **multiplicative/additive adjustments** to the base HSB values, not replacements. They stack naturally.
 
 **Interpolation**: Use cosine interpolation (not linear) between anchor points for smoother, more natural transitions.
+
+**Hue blending**: never blend hue linearly — a linear blend from amber to violet
+walks through the middle of the wheel and comes out teal. Use `blend_hue()` for
+the short path around the circle, and `blend_hue_descending()` for bad-weather
+targets. Warm hues sit almost exactly *opposite* blue-grey, so the "short" path
+between them is a coin flip that half the time lands in green; forcing the
+descending route (amber → red → magenta → violet → blue) keeps rain and storms
+in the same family as the night end of the curve.
 
 ### 3. Hue API Module (`hue_api.py`)
 
@@ -104,10 +137,17 @@ hue:
 palette:
   brightness_multiplier: 1.0  # Global brightness scale (0.5 = half bright, 1.5 = brighter)
   saturation_multiplier: 1.0  # Global saturation scale
+  brightness_floor: 60  # Brightness is compressed into this..100, not clamped
   cloud_desaturation_strength: 0.25  # How much clouds desaturate (0-1)
-  rain_hue_shift: 15  # Degrees to shift toward blue during rain
+  rain_hue_target: 215  # Hue to drift toward during rain (blue-grey)
   temperature_influence: 0.1  # How much temp affects color (0 = none, 1 = heavy)
+  azimuth_warmth: 0.10  # How much warmer afternoons run than mornings
+  wind_influence: 0.15  # How much wind lifts saturation/brightness
 ```
+
+**Brightness floor**: compressing 0-100 into `floor`-100 (rather than clamping
+everything below the floor *to* the floor) is what keeps the night arc alive.
+A hard clamp flattened deep night, twilight and dawn to one identical value.
 
 ### 5. Main Runner (`main.py`)
 

@@ -19,9 +19,13 @@ hue:
 palette:
   brightness_multiplier: 1.0  # Global brightness scale (0.5 = half bright, 1.5 = brighter)
   saturation_multiplier: 1.0  # Global saturation scale
-  brightness_floor: 60        # Minimum brightness % — keeps lights ambient even at night (0 = no floor)
+  brightness_floor: 60        # Brightness is compressed into this..100 (not clamped), so
+                              # night stays ambient but keeps its shape. 0 = no floor.
   cloud_desaturation_strength: 0.25  # How much clouds desaturate (0-1)
-  rain_hue_shift: 15  # Degrees to shift toward blue during rain
+  rain_hue_target: 215        # Hue to drift toward during rain (210-230° = blue-grey)
   temperature_influence: 0.1  # How much temp affects color (0 = none, 1 = heavy)
-  clear_sky_saturation_boost: 20  # Saturation boost on clear sunny days (sun >10°, clouds <30%)
+  clear_sky_saturation_boost: 20  # % saturation boost on clear sunny days (sun >10°, clouds <30%)
   thunderstorm_hue_target: 265    # Hue target during thunderstorms (260-270° = deep violet)
+  azimuth_warmth: 0.10        # How much warmer the afternoon runs than the morning at the
+                              # same sun height (0 = mornings and afternoons look identical)
+  wind_influence: 0.15        # How much wind lifts saturation/brightness (0 = none)

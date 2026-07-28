@@ -7,3 +7,4 @@ tokens.json
 lights_config.json
 *.log
 .pytest_cache/
+palette_preview.html

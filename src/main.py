@@ -103,13 +103,11 @@ def run(config: dict, lights_config: dict, dry_run: bool = False) -> None:
             return
 
     # 2. Compute palette
+    # Pass the whole palette section through - hand-listing keys here meant new
+    # tunables in config.yaml were silently ignored in favour of code defaults.
     h, s, b = compute_hsb(
         state,
-        palette_config={
-            "cloud_desaturation_strength": palette_cfg.get("cloud_desaturation_strength", 0.25),
-            "rain_hue_shift": palette_cfg.get("rain_hue_shift", 15),
-            "temperature_influence": palette_cfg.get("temperature_influence", 0.1),
-        },
+        palette_config=palette_cfg,
         brightness_multiplier=bri_mult,
         saturation_multiplier=sat_mult,
         brightness_floor=palette_cfg.get("brightness_floor", 0),

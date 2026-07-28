@@ -35,8 +35,9 @@ WEATHER_SCENARIOS = {
 }
 
 ANCHOR_LABELS = [
-    "Deep Night", "Twilight", "Pre-dawn",
-    "Dawn/Dusk", "Golden Hour", "Morning/Afternoon", "Midday",
+    "Deep Night", "Twilight", "Pre-dawn/Dusk",
+    "Horizon", "Sunrise/Sunset", "Golden Hour", "Morning/Afternoon",
+    "Warm Neutral", "Cool Gold", "Crossover", "Summer Midday",
 ]
 
 
@@ -71,13 +72,8 @@ def make_env_state(dt, scenario):
 def compute_color(dt, scenario, palette_cfg):
     """Compute palette output for a datetime + scenario. Returns dict with all values."""
     state = make_env_state(dt, scenario)
-    cfg = {
-        "cloud_desaturation_strength": palette_cfg.get("cloud_desaturation_strength", 0.25),
-        "rain_hue_shift": palette_cfg.get("rain_hue_shift", 15),
-        "temperature_influence": palette_cfg.get("temperature_influence", 0.1),
-        "clear_sky_saturation_boost": palette_cfg.get("clear_sky_saturation_boost", 20),
-        "thunderstorm_hue_target": palette_cfg.get("thunderstorm_hue_target", 265),
-    }
+    # Pass the whole section through so new tunables are picked up automatically.
+    cfg = palette_cfg
     bri_mult = palette_cfg.get("brightness_multiplier", 1.0)
     sat_mult = palette_cfg.get("saturation_multiplier", 1.0)
     bri_floor = palette_cfg.get("brightness_floor", 0)
@@ -266,7 +262,7 @@ def render_anchors_section():
         detail_cls = "anchor-detail" + (" swatch-detail-light" if suffix == "light" else "")
         html += (
             f'<div class="anchor" style="background:rgb({r},{g},{b_rgb})">'
-            f'<div class="{name_cls}">{ANCHOR_LABELS[i]}</div>'
+            f'<div class="{name_cls}">{ANCHOR_LABELS[i] if i < len(ANCHOR_LABELS) else f"Anchor {i}"}</div>'
             f'<div class="{detail_cls}">elev {elev:+d}\u00b0</div>'
             f'<div class="{detail_cls}">H={h} S={s} B={b}</div>'
             f'</div>\n'
@@ -279,12 +275,14 @@ def render_anchors_section():
 CONFIG_DESCRIPTIONS = {
     "brightness_multiplier": "Global brightness scale",
     "saturation_multiplier": "Global saturation scale",
-    "brightness_floor": "Minimum brightness %",
+    "brightness_floor": "Brightness compressed into this..100",
     "cloud_desaturation_strength": "Cloud desaturation factor (0-1)",
-    "rain_hue_shift": "Hue shift toward blue in rain (degrees)",
+    "rain_hue_target": "Hue to drift toward in rain (degrees)",
     "temperature_influence": "Temperature hue influence (0-1)",
-    "clear_sky_saturation_boost": "Saturation boost on clear days",
+    "clear_sky_saturation_boost": "% saturation boost on clear days",
     "thunderstorm_hue_target": "Hue target during storms (degrees)",
+    "azimuth_warmth": "How much warmer afternoons run than mornings",
+    "wind_influence": "How much wind lifts saturation/brightness",
 }
 
 

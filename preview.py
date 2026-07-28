@@ -23,6 +23,18 @@ from src.color_utils import hsb_to_rgb
 
 VANCOUVER_TZ = zoneinfo.ZoneInfo("America/Vancouver")
 
+CONFIG_PATH = Path(__file__).parent / "config.yaml"
+
+
+def load_palette_config() -> dict:
+    """Load the palette section of config.yaml, falling back to engine defaults."""
+    try:
+        import yaml
+        with open(CONFIG_PATH) as f:
+            return yaml.safe_load(f).get("palette", {}) or {}
+    except Exception:
+        return {}
+
 CONDITION_MAP = {
     "clear":       ("Clear", 800),
     "clouds":      ("Clouds", 801),
@@ -60,12 +72,15 @@ def main():
                         help="Wind speed m/s (default: 2.0)")
     parser.add_argument("--visibility", type=float, default=10000.0,
                         help="Visibility in metres (default: 10000)")
-    parser.add_argument("--bri-mult", type=float, default=1.0,
-                        help="Brightness multiplier (default: 1.0)")
-    parser.add_argument("--sat-mult", type=float, default=1.0,
-                        help="Saturation multiplier (default: 1.0)")
-    parser.add_argument("--bri-floor", type=float, default=0.0,
-                        help="Minimum brightness %% (default: 0, match config.yaml brightness_floor)")
+    # Default the global knobs to config.yaml so a preview matches what the
+    # runner would actually push to the lights.
+    _cfg = load_palette_config()
+    parser.add_argument("--bri-mult", type=float, default=_cfg.get("brightness_multiplier", 1.0),
+                        help="Brightness multiplier (default: from config.yaml)")
+    parser.add_argument("--sat-mult", type=float, default=_cfg.get("saturation_multiplier", 1.0),
+                        help="Saturation multiplier (default: from config.yaml)")
+    parser.add_argument("--bri-floor", type=float, default=_cfg.get("brightness_floor", 0.0),
+                        help="Brightness compressed into this..100 (default: from config.yaml)")
     args = parser.parse_args()
 
     if args.time:
@@ -95,11 +110,8 @@ def main():
         timestamp=dt,
     )
 
-    palette_config = {
-        "cloud_desaturation_strength": 0.25,
-        "rain_hue_shift": 15,
-        "temperature_influence": 0.1,
-    }
+    # Read the real tuning values so preview matches what the runner produces.
+    palette_config = load_palette_config()
 
     h, s, b = compute_hsb(
         state, palette_config,
